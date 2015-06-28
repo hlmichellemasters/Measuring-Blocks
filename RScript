@@ -1,0 +1,85 @@
+# First, make sure to set your working directory to be wherever you are - you can do this with the 
+# typed command below (just delete the hashtag) or by going to Session>set working directory and 
+# choosing it that way
+
+# setwd("~/Desktop/Laptop_Backup/Desktop/Microbial Genomics/Other Exercises")
+
+#First, need to read in your data. You want your data to be arranged so that the first line are the variable
+# names, and with the subsequent data extending below. The easiest data format for R is to have things
+# saved as .csv files - these are comma-separate-value files, and excel can save in that format.
+
+data1 <- read.csv("MeasuringBlocks.csv") # This line reads your data
+attach(data1) # This line defines the first line entries as the variable names
+
+block1 <- block1[!is.na(block1)] # Here, I am assuming you will name your columns according to "block 1" versus "block 2"
+block2 <- block2[!is.na(block2)]
+
+sink("ttest.txt") #This line tells it to save the results from the ttest to a file called ttest.txt - it will be in your working directory
+test <- t.test(block1, block2)
+
+p_val <- (test)[["p.value"]]
+p_val <- signif(p_val, 3)
+
+print("Results")
+print(test)
+sink() # this closes that ttest.txt file so that you don't keep adding to it
+
+pdf("boxplot.pdf") # Here, we can output a figure that is a boxplot of the data
+boxplot(block1, block2, main="Block sizes", xlab="Block", ylab="Size", col=c("red","blue"))
+mtext(paste("p =", p_val))
+dev.off() # This turns off the pdf output feature
+
+block1_mean <- mean(block1) # These lines are calculating the mean and standard error for the measurements
+block1_SE <- sd(block1)/sqrt(length(block1))
+
+block2_mean <- mean(block2)
+block2_SE <- sd(block2)/sqrt(length(block2))
+
+means <- c(block1_mean, block2_mean)
+SEs <- c(block1_SE, block2_SE)
+
+bar_up <- means + SEs # Next, we will make a bar plot with error bars that reflect the SE values - these variables are so we can plot that
+bar_down <- means - SEs
+
+pdf("barplot.pdf")
+
+bar_plot <- barplot(means, main="Block sizes", xlab="Block", ylab="Size", col=c("red","blue"), ylim = (c(0, (max(c(block1_mean, block2_mean))*1.5))))
+# THis is the main plot of the means
+
+axis(1, labels=c("Block1", "Block2"), at = bar_plot)
+box()
+# These two lines are just to make it look nice, and label it
+
+segments(bar_plot, bar_down, bar_plot, bar_up, lwd=2)
+segments(bar_plot - 0.1, bar_down, bar_plot + 0.1, bar_down, lwd=2)
+segments(bar_plot - 0.1, bar_up, bar_plot + 0.1, bar_up, lwd=2)
+
+mtext(paste("p =", p_val))
+# These "segments" are what are actually drawing the error bars
+
+dev.off()
+
+# Lastly, I wanted to illustrate the correlation function - show how the size of the block is explained by variation in width
+correlation <- lm(size ~ width)
+
+r_squared <- summary(correlation)$r.squared
+p_value <- summary(correlation)$coefficients["width","Pr(>|t|)"]
+
+sink("correlation.txt") # This saves that output to a text file
+
+print("Correlation")
+print(correlation)
+summary <- summary(correlation)
+print(summary(correlation))
+print(r_squared)
+print(p_value)
+sink() # Again, thise closes the text file
+
+r_squared <- signif(r_squared, 3)
+p_value <- signif(p_value, 3)
+
+pdf("correlation.pdf") # Now we can save the figure itself
+plot(width, size, pch=20)
+abline(correlation, col="red", lwd=2)
+mtext(paste("r2 =", r_squared, ", p =", p_value))
+dev.off()
